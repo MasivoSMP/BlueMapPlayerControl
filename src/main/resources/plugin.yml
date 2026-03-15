@@ -10,9 +10,10 @@ description: Adds player hiding functionality to BlueMap
 website: https://github.com/TechnicJelle/BlueMapPlayerControl
 
 commands:
-  bmpc:
-    usage: /<command> [hide | show] [player]
-    description: Toggles visibility on BlueMap
+  mapaweb:
+    usage: /<command> <ocultar | mostrar> [player]
+    description: Controla la visibilidad en BlueMap
+    aliases: [bmpc]
     permission: bmpc
 
 permissions:

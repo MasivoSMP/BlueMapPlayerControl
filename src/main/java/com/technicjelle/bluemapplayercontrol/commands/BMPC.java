@@ -1,8 +1,8 @@
 package com.technicjelle.bluemapplayercontrol.commands;
 
+import com.technicjelle.bluemapplayercontrol.BlueMapPlayerControl;
 import de.bluecolored.bluemap.api.BlueMapAPI;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -13,12 +13,15 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @SuppressWarnings("UnstableApiUsage")
 public class BMPC implements CommandExecutor, TabCompleter {
+	private final BlueMapPlayerControl plugin;
 
-	public BMPC() {
+	public BMPC(BlueMapPlayerControl plugin) {
+		this.plugin = plugin;
 	}
 
 	@Override
@@ -26,59 +29,58 @@ public class BMPC implements CommandExecutor, TabCompleter {
 		if (BlueMapAPI.getInstance().isPresent()) {
 			BlueMapAPI api = BlueMapAPI.getInstance().get();
 
+			if (args.length == 0) {
+				plugin.sendConfiguredMessage(sender, "base-command");
+				return true;
+			}
+
+			String subCommand = args[0].toLowerCase(Locale.ROOT);
+			Boolean shouldBeVisible = switch (subCommand) {
+				case "mostrar" -> true;
+				case "ocultar" -> false;
+				default -> null;
+			};
+
+			if (shouldBeVisible == null) {
+				plugin.sendConfiguredMessage(sender, "invalid-subcommand", "subcommand", args[0]);
+				return true;
+			}
+
 			// === SELF ===
-			if (sender instanceof Player player) { // only players can self
-				UUID senderUUID = player.getUniqueId();
-				if (args.length == 0) {
-					//toggle
-					if (api.getWebApp().getPlayerVisibility(senderUUID)) {
-						hideSelf(api, sender, senderUUID);
-					} else {
-						showSelf(api, sender, senderUUID);
-					}
+			if (args.length == 1) {
+				if (!(sender instanceof Player player)) {
+					plugin.sendConfiguredMessage(sender, "must-be-player");
 					return true;
 				}
-				if (args.length == 1) {
-					if (args[0].equalsIgnoreCase("show")) {
-						showSelf(api, sender, senderUUID);
-						return true;
-					} else if (args[0].equalsIgnoreCase("hide")) {
-						hideSelf(api, sender, senderUUID);
-						return true;
-					}
-				}
-			} else {
-				if (args.length == 0) {
-					sender.sendMessage(ChatColor.RED + "You must be a player to hide yourself");
-					return true;
-				}
+
+				setSelfVisibility(api, sender, player.getUniqueId(), shouldBeVisible);
+				return true;
 			}
 
 			// === OTHER ===
 			if (!othersAllowed(sender)) {
-				sender.sendMessage(ChatColor.RED + "You are don't have permission to change the visibility of others");
-			} else {
-				String targetName = args[args.length - 1];
-				List<Entity> targets = Bukkit.selectEntities(sender, targetName);
-				if (targets.isEmpty()) {
-					sender.sendMessage(ChatColor.YELLOW + "Player \"" + targetName + "\" not found");
-					return true;
+				plugin.sendConfiguredMessage(sender, "no-permission-others");
+				return true;
+			}
+
+			String targetName = args[1];
+			List<Entity> targets = Bukkit.selectEntities(sender, targetName);
+			if (targets.isEmpty()) {
+				plugin.sendConfiguredMessage(sender, "player-not-found", "player", targetName);
+				return true;
+			}
+
+			boolean foundPlayer = false;
+			for (Entity target : targets) {
+				if (!(target instanceof Player targetPlayer)) {
+					continue;
 				}
-				for (Entity target : targets) {
-					if (!(target instanceof Player targetPlayer)) continue;
-					if (args.length == 1) {
-						//toggle
-						if (api.getWebApp().getPlayerVisibility(targetPlayer.getUniqueId())) {
-							hideOther(api, sender, targetPlayer);
-						} else {
-							showOther(api, sender, targetPlayer);
-						}
-					} else if (args[0].equalsIgnoreCase("show")) {
-						showOther(api, sender, targetPlayer);
-					} else if (args[0].equalsIgnoreCase("hide")) {
-						hideOther(api, sender, targetPlayer);
-					}
-				}
+				foundPlayer = true;
+				setOtherVisibility(api, sender, targetPlayer, shouldBeVisible);
+			}
+
+			if (!foundPlayer) {
+				plugin.sendConfiguredMessage(sender, "player-not-found", "player", targetName);
 			}
 			return true;
 		}
@@ -86,52 +88,33 @@ public class BMPC implements CommandExecutor, TabCompleter {
 		return false;
 	}
 
-	private static void showSelf(BlueMapAPI blueMapAPI, CommandSender sender, UUID senderUUID) {
-		blueMapAPI.getWebApp().setPlayerVisibility(senderUUID, true);
-		sender.sendMessage("You are now " + ChatColor.AQUA + "visible" + ChatColor.RESET + " on the map");
+	private void setSelfVisibility(BlueMapAPI blueMapAPI, CommandSender sender, UUID senderUUID, boolean shouldBeVisible) {
+		blueMapAPI.getWebApp().setPlayerVisibility(senderUUID, shouldBeVisible);
+		plugin.setPlayerVisibilityPreference(senderUUID, shouldBeVisible);
+		plugin.sendConfiguredMessage(sender, shouldBeVisible ? "self-visible" : "self-invisible");
 	}
 
-	private static void hideSelf(BlueMapAPI blueMapAPI, CommandSender sender, UUID senderUUID) {
-		blueMapAPI.getWebApp().setPlayerVisibility(senderUUID, false);
-		sender.sendMessage("You are now " + ChatColor.GOLD + "invisible" + ChatColor.RESET + " on the map");
-	}
-
-	private static void showOther(BlueMapAPI api, @NotNull CommandSender sender, Player targetPlayer) {
-		api.getWebApp().setPlayerVisibility(targetPlayer.getUniqueId(), true);
-		sender.sendMessage(targetPlayer.getDisplayName() + " is now " + ChatColor.AQUA + "visible" + ChatColor.RESET + " on the map");
-	}
-
-	private static void hideOther(BlueMapAPI api, @NotNull CommandSender sender, Player targetPlayer) {
-		api.getWebApp().setPlayerVisibility(targetPlayer.getUniqueId(), false);
-		sender.sendMessage(targetPlayer.getDisplayName() + " is now " + ChatColor.GOLD + "invisible" + ChatColor.RESET + " on the map");
+	private void setOtherVisibility(BlueMapAPI api, @NotNull CommandSender sender, Player targetPlayer, boolean shouldBeVisible) {
+		api.getWebApp().setPlayerVisibility(targetPlayer.getUniqueId(), shouldBeVisible);
+		plugin.setPlayerVisibilityPreference(targetPlayer.getUniqueId(), shouldBeVisible);
+		plugin.sendConfiguredMessage(sender, shouldBeVisible ? "other-visible" : "other-invisible", "player", targetPlayer.getName());
 	}
 
 	@Override
 	public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
 		List<String> completions = new ArrayList<>();
 		if (args.length == 1) {
-			completions.add("show");
-			completions.add("hide");
-			if (othersAllowed(sender)) {
+			completions.add("mostrar");
+			completions.add("ocultar");
+		} else if (args.length == 2 && othersAllowed(sender)) {
+			if (args[0].equalsIgnoreCase("mostrar") || args[0].equalsIgnoreCase("ocultar")) {
 				for (Player player : sender.getServer().getOnlinePlayers()) {
 					completions.add(player.getName());
 				}
-			}
-		}
-		if (othersAllowed(sender)) {
-			if (sender.getServer().getPlayer(args[0]) == null
-					|| args[0].equalsIgnoreCase("show")
-					|| args[0].equalsIgnoreCase("hide")
-					|| args[0].isBlank()) {
-				if (args.length <= 2) {
-					for (Player player : sender.getServer().getOnlinePlayers()) {
-						completions.add(player.getName());
-					}
-					completions.add("@a");
-					completions.add("@p");
-					completions.add("@r");
-					completions.add("@s");
-				}
+				completions.add("@a");
+				completions.add("@p");
+				completions.add("@r");
+				completions.add("@s");
 			}
 		}
 		return completions;

@@ -1,0 +1,12 @@
+default-visibility: false
+
+messages:
+  base-command: "<gray>Haz click para abrir nuestro mapa web: <aqua><click:open_url:'https://example.com'>https://example.com</click></aqua></gray>"
+  invalid-subcommand: "<red>Subcomando invalido: <white><subcommand></white>. Usa <white>/mapaweb (mostrar|ocultar) [jugador]</white></red>"
+  self-visible: "<gray>Ahora eres <aqua>visible</aqua> en el mapa</gray>"
+  self-invisible: "<gray>Ahora eres <gold>invisible</gold> en el mapa</gray>"
+  other-visible: "<gray><player> ahora es <aqua>visible</aqua> en el mapa</gray>"
+  other-invisible: "<gray><player> ahora es <gold>invisible</gold> en el mapa</gray>"
+  must-be-player: "<red>Debes ser un jugador para cambiar tu propia visibilidad</red>"
+  no-permission-others: "<red>No tienes permiso para cambiar la visibilidad de otros</red>"
+  player-not-found: "<yellow>No se encontro al jugador \"<player>\"</yellow>"

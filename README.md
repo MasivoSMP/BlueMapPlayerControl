@@ -10,14 +10,22 @@ Simple [Paper](https://papermc.io/) plugin that allows you to show/hide players 
 ## Commands
 | Command               | Usage                                | Permission                |
 |-----------------------|--------------------------------------|---------------------------|
-| `/bmpc`               | Toggles your own visibility          | `bmpc.self.toggle`        |
-| `/bmpc show`          | Makes yourself visible               | `bmpc.self.show`          |
-| `/bmpc hide`          | Makes yourself invisible             | `bmpc.self.hide`          |
-| `/bmpc [player]`      | Toggles the visibility of any player | `bmpc.others.toggle` (OP) |
-| `/bmpc show [player]` | Makes the specified player visible   | `bmpc.others.show` (OP)   |
-| `/bmpc hide [player]` | Makes the specified player invisible | `bmpc.others.hide` (OP)   |
+| `/mapaweb`                  | Sends the configured info/link message       | `bmpc`                    |
+| `/mapaweb mostrar`          | Makes yourself visible                        | `bmpc.self.show`          |
+| `/mapaweb ocultar`          | Makes yourself invisible                      | `bmpc.self.hide`          |
+| `/mapaweb mostrar [player]` | Makes the specified player visible            | `bmpc.others.show` (OP)   |
+| `/mapaweb ocultar [player]` | Makes the specified player invisible          | `bmpc.others.hide` (OP)   |
 
 ℹ️️ Supports `@a`, `@p`, `@r` and `@s` as player arguments.
+
+## Configuration
+`config.yml` now supports:
+
+- `default-visibility`: default visibility for players that do not yet have a saved preference (`false` by default).
+- `messages.*`: all command feedback messages, parsed as MiniMessage (for example: `<red>`, `<gold>`, `<bold>`).
+- `messages.base-command`: message sent when users run `/mapaweb` with no arguments.
+
+Player visibility choices are saved in `plugins/BlueMapPlayerControl/player-visibility.db` (SQLite), so players can opt in/out and keep that preference.
 
 ## [Click here to download!](../../releases/latest)
 
